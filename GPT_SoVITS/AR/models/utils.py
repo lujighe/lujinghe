@@ -208,13 +208,14 @@ def make_reject_y(y_o, y_lens):
     bs = len(y_lens)
     reject_y = []
     reject_y_lens = []
+    proportion=0.5 # repeat/total
     for b in range(bs):
-        process_item_idx = torch.randint(0, 1, size=(1, ))[0]
-        if process_item_idx == 0:
+        process_item_idx = torch.rand(1)
+        if process_item_idx < proportion:
             new_y = repeat_P(y_o[b])
             reject_y.append(new_y)
             reject_y_lens.append(len(new_y))
-        elif process_item_idx==1:
+        else:
             new_y = lost_P(y_o[b])
             reject_y.append(new_y)
             reject_y_lens.append(len(new_y))
