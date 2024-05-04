@@ -55,7 +55,7 @@ from scipy.io import wavfile
 from tools.my_utils import load_audio
 from multiprocessing import cpu_count
 
-# os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1' # 当遇到mps不支持的步骤时使用cpu
+os.environ['PYTORCH_ENABLE_MPS_FALLBACK'] = '1' # 当遇到mps不支持的步骤时使用cpu
 
 n_cpu=cpu_count()
            
@@ -64,28 +64,27 @@ gpu_infos = []
 mem = []
 if_gpu_ok = False
 
-# 判断是否有能用来训练和加速推理的N卡
+# Windows and Linux
 if torch.cuda.is_available() or ngpu != 0:
     for i in range(ngpu):
-        gpu_name = torch.cuda.get_device_name(i)
-        if any(value in gpu_name.upper()for value in ["10","16","20","30","40","A2","A3","A4","P4","A50","500","A60","70","80","90","M4","T4","TITAN","L4","4060"]):
-            # A10#A100#V100#A40#P40#M40#K80#A4500
-            if_gpu_ok = True  # 至少有一张能用的N卡
-            gpu_infos.append("%s\t%s" % (i, gpu_name))
-            mem.append(int(torch.cuda.get_device_properties(i).total_memory/ 1024/ 1024/ 1024+ 0.4))
-# # 判断是否支持mps加速
-# if torch.backends.mps.is_available():
-#     if_gpu_ok = True
-#     gpu_infos.append("%s\t%s" % ("0", "Apple GPU"))
-#     mem.append(psutil.virtual_memory().total/ 1024 / 1024 / 1024) # 实测使用系统内存作为显存不会爆显存
+        gpu = torch.cuda.get_device_properties(i)
+        if gpu.total_memory > 5905580032: # 5.5GB VRAM
+            gpu_infos.append("%s\t%s" % (i, gpu.name))
+            mem.append(int(gpu.total_memory / 1024 / 1024 / 1024 + 0.4))
+            if_gpu_ok = True
+
+# macOS
+if torch.backends.mps.is_available():
+    if_gpu_ok = True
+    gpu_infos.append("%s\t%s" % ("0", "Apple silicon"))
+    mem.append(psutil.virtual_memory().total/ 1024 / 1024 / 1024) # 实测使用系统内存作为显存不会爆显存
 
 if if_gpu_ok and len(gpu_infos) > 0:
     gpu_info = "\n".join(gpu_infos)
     default_batch_size = min(mem) // 2
 else:
-    gpu_info = ("%s\t%s" % ("0", "CPU"))
-    gpu_infos.append("%s\t%s" % ("0", "CPU"))
-    default_batch_size = psutil.virtual_memory().total/ 1024 / 1024 / 1024 / 2
+    gpu_info = i18n("很遗憾您这没有能用的显卡来支持您训练")
+    default_batch_size = 1
 gpus = "-".join([i[0] for i in gpu_infos])
 
 pretrained_sovits_name="GPT_SoVITS/pretrained_models/s2G488k.pth"
