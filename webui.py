@@ -73,17 +73,12 @@ if torch.cuda.is_available() or ngpu != 0:
             mem.append(int(gpu.total_memory / 1024 / 1024 / 1024 + 0.4))
             if_gpu_ok = True
 
-# macOS
-if torch.backends.mps.is_available():
-    if_gpu_ok = True
-    gpu_infos.append("%s\t%s" % ("0", "Apple silicon"))
-    mem.append(psutil.virtual_memory().total/ 1024 / 1024 / 1024) # 实测使用系统内存作为显存不会爆显存
-
 if if_gpu_ok and len(gpu_infos) > 0:
     gpu_info = "\n".join(gpu_infos)
     default_batch_size = min(mem) // 2
 else:
-    gpu_info = i18n("很遗憾您这没有能用的显卡来支持您训练")
+    gpu_info = ("%s\t%s" % ("0", "CPU"))
+    gpu_infos.append("%s\t%s" % ("0", "CPU"))
     default_batch_size = 1
 gpus = "-".join([i[0] for i in gpu_infos])
 
